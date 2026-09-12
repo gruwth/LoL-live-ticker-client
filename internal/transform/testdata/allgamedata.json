@@ -1,0 +1,154 @@
+{
+  "activePlayer": {
+    "abilities": {
+      "E": {"abilityLevel": 1, "displayName": "Chilling Scream", "id": "BriarE"},
+      "Passive": {"displayName": "Crimson Curse", "id": "BriarP"},
+      "Q": {"abilityLevel": 3, "displayName": "Head Rush", "id": "BriarQ"},
+      "R": {"abilityLevel": 1, "displayName": "Certain Death", "id": "BriarR"},
+      "W": {"abilityLevel": 2, "displayName": "Blood Frenzy", "id": "BriarW"}
+    },
+    "championStats": {
+      "abilityHaste": 10,
+      "abilityPower": 0,
+      "armor": 54.72,
+      "attackDamage": 108.4,
+      "attackSpeed": 0.981,
+      "currentHealth": 1284.6,
+      "magicResist": 38.5,
+      "maxHealth": 1690,
+      "moveSpeed": 335,
+      "resourceMax": 480,
+      "resourceValue": 240.5
+    },
+    "currentGold": 1337.5,
+    "level": 6,
+    "riotId": "Gruwth#EUW",
+    "summonerName": ""
+  },
+  "allPlayers": [
+    {
+      "championName": "Briar",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": false,
+          "consumable": false,
+          "count": 1,
+          "displayName": "Hubris",
+          "itemID": 6631,
+          "price": 1100,
+          "rawDescription": "GeneratedTip_Item_6631_Description",
+          "rawDisplayName": "Item_6631_Name",
+          "slot": 0
+        },
+        {
+          "canUse": true,
+          "consumable": false,
+          "count": 1,
+          "displayName": "Stealth Ward",
+          "itemID": 3340,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_3340_Description",
+          "rawDisplayName": "Item_3340_Name",
+          "slot": 6
+        }
+      ],
+      "level": 6,
+      "position": "JUNGLE",
+      "rawChampionName": "game_character_displayname_Briar",
+      "respawnTimer": 0,
+      "riotId": "Gruwth#EUW",
+      "riotIdGameName": "Gruwth",
+      "riotIdTagLine": "EUW",
+      "scores": {"assists": 2, "creepScore": 74, "deaths": 1, "kills": 4, "wardScore": 3.5},
+      "skinID": 0,
+      "summonerName": "",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Smite",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerSmite_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerSmite_DisplayName"
+        }
+      },
+      "team": "ORDER"
+    },
+    {
+      "championName": "Lux",
+      "isBot": true,
+      "isDead": true,
+      "items": [
+        {
+          "canUse": false,
+          "consumable": false,
+          "count": 1,
+          "displayName": "Ruby Crystal",
+          "itemID": 1056,
+          "price": 400,
+          "rawDescription": "GeneratedTip_Item_1056_Description",
+          "rawDisplayName": "Item_1056_Name",
+          "slot": 0
+        }
+      ],
+      "level": 5,
+      "position": "",
+      "rawChampionName": "game_character_displayname_Lux",
+      "respawnTimer": 12.4,
+      "riotId": "PracticeBot#BOT",
+      "riotIdGameName": "PracticeBot",
+      "riotIdTagLine": "BOT",
+      "scores": {"assists": 0, "creepScore": 12, "deaths": 4, "kills": 0, "wardScore": 0},
+      "skinID": 3,
+      "summonerName": "",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Ignite",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerDot_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerDot_DisplayName"
+        }
+      },
+      "team": "CHAOS"
+    }
+  ],
+  "events": {
+    "Events": [
+      {"EventID": 0, "EventName": "GameStart", "EventTime": 0.03},
+      {"EventID": 1, "EventName": "MinionsSpawning", "EventTime": 65.01},
+      {"EventID": 2, "EventName": "FirstBlood", "EventTime": 184.7, "Recipient": "Gruwth#EUW"},
+      {
+        "Assisters": ["Gruwth#EUW"],
+        "DragonType": "Infernal",
+        "EventID": 3,
+        "EventName": "DragonKill",
+        "EventTime": 431.9,
+        "KillerName": "Gruwth#EUW",
+        "Stolen": "False"
+      },
+      {
+        "Assisters": [],
+        "EventID": 4,
+        "EventName": "ChampionKill",
+        "EventTime": 598.2,
+        "KillerName": "Gruwth#EUW",
+        "VictimName": "PracticeBot#BOT"
+      }
+    ]
+  },
+  "gameData": {
+    "gameMode": "PRACTICETOOL",
+    "gameTime": 612.35,
+    "mapName": "Map11",
+    "mapNumber": 11,
+    "mapTerrain": "Default"
+  }
+}

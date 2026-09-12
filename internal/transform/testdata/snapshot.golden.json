@@ -1,0 +1,93 @@
+{
+  "game": {
+    "mode": "PRACTICETOOL",
+    "time": 612.35,
+    "map": "Map11",
+    "terrain": "Default"
+  },
+  "players": [
+    {
+      "riotId": "Gruwth#EUW",
+      "name": "Gruwth",
+      "tag": "EUW",
+      "champion": "Briar",
+      "skinId": 0,
+      "team": "ORDER",
+      "pos": "JUNGLE",
+      "lvl": 6,
+      "k": 4,
+      "d": 1,
+      "a": 2,
+      "cs": 74,
+      "ws": 3.5,
+      "items": [
+        {
+          "id": 6631,
+          "slot": 0,
+          "count": 1
+        },
+        {
+          "id": 3340,
+          "slot": 6,
+          "count": 1
+        }
+      ],
+      "spells": [
+        "Flash",
+        "Smite"
+      ]
+    },
+    {
+      "riotId": "PracticeBot#BOT",
+      "name": "PracticeBot",
+      "tag": "BOT",
+      "champion": "Lux",
+      "skinId": 3,
+      "team": "CHAOS",
+      "lvl": 5,
+      "bot": true,
+      "dead": true,
+      "respawn": 12.4,
+      "k": 0,
+      "d": 4,
+      "a": 0,
+      "cs": 12,
+      "ws": 0,
+      "items": [
+        {
+          "id": 1056,
+          "slot": 0,
+          "count": 1
+        }
+      ],
+      "spells": [
+        "Flash",
+        "Ignite"
+      ]
+    }
+  ],
+  "active": {
+    "riotId": "Gruwth#EUW",
+    "gold": 1337.5,
+    "lvl": 6,
+    "hp": 1284.6,
+    "maxHp": 1690,
+    "stats": {
+      "ad": 108.4,
+      "ap": 0,
+      "armor": 54.72,
+      "as": 0.98,
+      "haste": 10,
+      "mr": 38.5,
+      "ms": 335,
+      "resource": 240.5,
+      "resourceMax": 480
+    },
+    "abilities": {
+      "E": 1,
+      "Q": 3,
+      "R": 1,
+      "W": 2
+    }
+  }
+}
