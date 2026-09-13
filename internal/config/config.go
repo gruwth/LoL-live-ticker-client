@@ -13,6 +13,12 @@ type Config struct {
 	Server            string `json:"server"`
 	Token             string `json:"token"`
 	ShareActivePlayer bool   `json:"shareActivePlayer"`
+
+	// Desktop-only settings. They are ignored by a headless build, but are
+	// kept in the same file so one config describes the whole app.
+	DiscordRPC       bool `json:"discordRpc"`
+	StartMinimized   bool `json:"startMinimized"`
+	AutoCheckUpdates bool `json:"autoCheckUpdates"`
 }
 
 // ErrNoConfig means there is nothing configured yet - first run.
@@ -28,9 +34,20 @@ func DefaultPath() (string, error) {
 	return filepath.Join(dir, "lolticker", "config.json"), nil
 }
 
+// Defaults are what a config file gets before anything is read over it.
+// Discord Rich Presence is off by default on purpose; the rest are the
+// friendly choices for a first run.
+func Defaults() Config {
+	return Config{
+		ShareActivePlayer: true,
+		DiscordRPC:        false,
+		AutoCheckUpdates:  true,
+	}
+}
+
 // Load reads path. A missing file is reported as ErrNoConfig.
 func Load(path string) (Config, error) {
-	c := Config{ShareActivePlayer: true}
+	c := Defaults()
 	b, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return c, ErrNoConfig
@@ -42,6 +59,25 @@ func Load(path string) (Config, error) {
 		return c, fmt.Errorf("parse %s: %w", path, err)
 	}
 	return c, nil
+}
+
+// Save writes the config, creating the directory if needed. The file is
+// written with 0600 because it holds a token.
+func Save(path string, c Config) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	b, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	// Write to a sibling and rename, so a crash mid-write cannot leave the
+	// user with a truncated config and no way back in.
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 // Validate checks the fields the agent cannot run without.
