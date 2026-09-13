@@ -22,8 +22,10 @@ That is the entire list. See [`internal/riot/client.go`](internal/riot/client.go
 To the one server in your config file, over a single WebSocket:
 
 - `snapshot` — game mode, map, clock, and per player: Riot ID, champion, skin,
-  team, position, level, K/D/A, CS, ward score, item IDs and summoner spells.
-- `events` — kills, turrets, dragons, barons and so on, as the game reports them.
+  team, position, level, K/D/A, CS, ward score, item IDs, summoner spells, and
+  the keystone rune plus both rune tree names.
+- `events` — kills, turrets, dragons, barons and so on, as the game reports
+  them, plus role-quest completions the agent infers (marked `syn`, see below).
 - `gameEnd` — win/lose when the game is over.
 - `idle` — a heartbeat every 30 s while you are not in a game.
 
@@ -38,6 +40,18 @@ chat, no telemetry or crash reporting, no analytics of any kind. Item and spell
 descriptions, and your rune pages, are dropped in the transform step and never
 leave the process. There is no second network destination: the only outbound
 connection is the WebSocket to your configured server.
+
+## Inferred events
+
+The 2026 role quests fire no event of their own, so the agent infers three of
+them from state it already polls — an upgraded Teleport or a level above 18
+(top), tier-3 boots (mid), an eighth inventory slot (bot) — and sends them as
+normal events flagged `"syn": true`. Nothing extra is read to do this; it is
+the same once-a-second payload, interpreted. Jungle and support get no event,
+because 26.01 gave them tuning rather than an observable reward.
+
+Rune data comes out of that same payload too. The agent never calls
+`/playermainrunes`.
 
 ## Why `InsecureSkipVerify` is in there
 

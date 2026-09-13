@@ -31,10 +31,24 @@ type Player struct {
 	RiotID          string         `json:"riotId"` // "Name#TAG"
 	RiotIDGameName  string         `json:"riotIdGameName"`
 	RiotIDTagLine   string         `json:"riotIdTagLine"`
+	Runes           Runes          `json:"runes"`
 	Scores          Scores         `json:"scores"`
 	SkinID          int            `json:"skinID"`
 	SummonerSpells  SummonerSpells `json:"summonerSpells"`
 	Team            string         `json:"team"` // ORDER (blue) | CHAOS (red)
+}
+
+// Runes is carried inside allgamedata for every player, so the separate
+// /playermainrunes endpoint is not needed. Runes cannot change during a game.
+type Runes struct {
+	Keystone          Rune `json:"keystone"`
+	PrimaryRuneTree   Rune `json:"primaryRuneTree"`
+	SecondaryRuneTree Rune `json:"secondaryRuneTree"`
+}
+
+type Rune struct {
+	DisplayName string `json:"displayName"`
+	ID          int    `json:"id"`
 }
 
 type Scores struct {

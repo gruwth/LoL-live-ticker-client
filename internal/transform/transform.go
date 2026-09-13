@@ -51,6 +51,7 @@ func Snapshot(raw *riot.AllGameData, includeActive bool) wire.Snapshot {
 				p.SummonerSpells.SummonerSpellTwo.DisplayName,
 			},
 		}
+		wp.Runes = runes(p.Runes)
 		for _, it := range p.Items {
 			wp.Items = append(wp.Items, wire.Item{ID: it.ItemID, Slot: it.Slot, Count: it.Count})
 		}
@@ -140,6 +141,21 @@ func idsUsable(raw []riot.Event) bool {
 		}
 	}
 	return raw[len(raw)-1].EventID > 0 || len(raw) == 1
+}
+
+// runes maps the rune block allgamedata already carries. It returns nil when
+// the client has not filled it in yet, so the field is simply absent rather
+// than present and empty.
+func runes(r riot.Runes) *wire.Runes {
+	if r.Keystone.ID == 0 && r.Keystone.DisplayName == "" {
+		return nil
+	}
+	return &wire.Runes{
+		Keystone:    r.Keystone.DisplayName,
+		KeystoneID:  r.Keystone.ID,
+		PrimaryTree: r.PrimaryRuneTree.DisplayName,
+		SecondTree:  r.SecondaryRuneTree.DisplayName,
+	}
 }
 
 // round trims the float32-widened-to-float64 noise the client sends

@@ -1,3 +1,4 @@
 /lolticker-agent
-/lolticker-agent.exe
+*.exe
+*.exe~
 *.jsonl

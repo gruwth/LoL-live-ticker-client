@@ -58,6 +58,14 @@ type Player struct {
 	WardScore float64   `json:"ws"`
 	Items     []Item    `json:"items"`
 	Spells    [2]string `json:"spells"` // display names, e.g. ["Flash","Ignite"]
+	Runes     *Runes    `json:"runes,omitempty"`
+}
+
+type Runes struct {
+	Keystone    string `json:"keystone"`   // display name, "Conqueror"
+	KeystoneID  int    `json:"keystoneId"` // for icon lookup
+	PrimaryTree string `json:"primary"`    // "Precision"
+	SecondTree  string `json:"secondary"`  // "Domination"
 }
 
 // Item carries no price: the frontend resolves id against Data Dragon
@@ -93,6 +101,8 @@ type Event struct {
 	Acer      string   `json:"acer,omitempty"`
 	AcingTeam string   `json:"acingTeam,omitempty"`
 	Result    string   `json:"result,omitempty"`
+	Synthetic bool     `json:"syn,omitempty"`   // agent-inferred, not reported by Riot
+	Quest     string   `json:"quest,omitempty"` // "top" | "mid" | "bot"
 }
 
 // GameEnd is the payload of a gameEnd envelope: {"result":"Win"} or {}.
