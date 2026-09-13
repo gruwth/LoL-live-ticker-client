@@ -35,7 +35,13 @@
       "spells": [
         "Flash",
         "Smite"
-      ]
+      ],
+      "runes": {
+        "keystone": "Conqueror",
+        "keystoneId": 8010,
+        "primary": "Precision",
+        "secondary": "Domination"
+      }
     },
     {
       "riotId": "PracticeBot#BOT",

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"lolticker-agent/internal/quest"
 	"lolticker-agent/internal/riot"
 	"lolticker-agent/internal/transform"
 	"lolticker-agent/internal/wire"
@@ -32,12 +33,24 @@ type Agent struct {
 	riot    *riot.Client
 	out     Sender
 	active  bool // include the local player's gold/stats/abilities
+	quests  *quest.Tracker
 	log     *slog.Logger
 	nowFunc func() time.Time
 }
 
 func New(rc *riot.Client, out Sender, includeActive bool, log *slog.Logger) *Agent {
-	return &Agent{riot: rc, out: out, active: includeActive, log: log, nowFunc: time.Now}
+	if len(quest.Tier3Boots) == 0 {
+		log.Warn("mid-lane quest detection is inert: no tier-3 boot IDs are configured " +
+			"(see internal/quest/constants.go)")
+	}
+	return &Agent{
+		riot:    rc,
+		out:     out,
+		active:  includeActive,
+		quests:  quest.NewTracker(),
+		log:     log,
+		nowFunc: time.Now,
+	}
 }
 
 type state int
@@ -97,6 +110,7 @@ func (a *Agent) Run(ctx context.Context) error {
 					a.log.Info("game ended (client gone)")
 					a.out.Send(wire.TypeGameEnd, wire.GameEnd{})
 					st, misses, lastSeenEvt, lastHash = stateIdle, 0, transform.NoEventsSeen, 0
+					a.quests.Reset()
 					lastIdle = time.Time{}
 				}
 				continue
@@ -112,6 +126,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			lastSeenEvt = transform.NoEventsSeen
 			lastHash = 0
 			lastSnapshot = time.Time{}
+			a.quests.Reset()
 		}
 
 		// Snapshot first, then the events that produced it, so a client that
@@ -129,6 +144,16 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		newEvents, next := transform.Events(data.Events.Events, lastSeenEvt)
 		lastSeenEvt = next
+
+		// Quest completions are inferred, not reported, so they bypass the
+		// EventID high-water mark entirely and ride along in the same message.
+		if qs := a.quests.Check(data.AllPlayers, snap.Game.Time); len(qs) > 0 {
+			for _, q := range qs {
+				a.log.Info("quest complete", "player", q.Killer, "quest", q.Quest)
+			}
+			newEvents = append(newEvents, qs...)
+		}
+
 		if len(newEvents) > 0 {
 			a.out.Send(wire.TypeEvents, newEvents)
 		}
@@ -137,6 +162,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			a.log.Info("game ended", "result", end.Result)
 			a.out.Send(wire.TypeGameEnd, end)
 			st, lastSeenEvt, lastHash = stateIdle, transform.NoEventsSeen, 0
+			a.quests.Reset()
 			lastIdle = time.Time{}
 		}
 	}

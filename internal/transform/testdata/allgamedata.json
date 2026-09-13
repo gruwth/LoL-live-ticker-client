@@ -61,6 +61,11 @@
       "riotId": "Gruwth#EUW",
       "riotIdGameName": "Gruwth",
       "riotIdTagLine": "EUW",
+      "runes": {
+        "keystone": {"displayName": "Conqueror", "id": 8010, "rawDescription": "perk_tooltip_Conqueror", "rawDisplayName": "perk_displayname_Conqueror"},
+        "primaryRuneTree": {"displayName": "Precision", "id": 8000, "rawDescription": "perkstyle_tooltip_7201", "rawDisplayName": "perkstyle_displayname_7201"},
+        "secondaryRuneTree": {"displayName": "Domination", "id": 8100, "rawDescription": "perkstyle_tooltip_7200", "rawDisplayName": "perkstyle_displayname_7200"}
+      },
       "scores": {"assists": 2, "creepScore": 74, "deaths": 1, "kills": 4, "wardScore": 3.5},
       "skinID": 0,
       "summonerName": "",
