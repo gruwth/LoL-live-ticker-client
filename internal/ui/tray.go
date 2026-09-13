@@ -38,7 +38,15 @@ func (u *UI) refreshTray() {
 	openLive := fyne.NewMenuItem("Open live page", func() { u.openURL(u.cur.ShareURL) })
 	openLive.Disabled = u.cur.ShareURL == ""
 
-	update := fyne.NewMenuItem("Check for updates", func() { u.ctrl.CheckForUpdates() })
+	// An available update shows up here as a labelled menu item, never as a
+	// dialog that takes the screen away from a match in progress.
+	updateLabel := "Check for updates"
+	if st := u.ctrl.UpdateState(); st.Pending {
+		updateLabel = "Update installs when your game ends"
+	} else if st.Available {
+		updateLabel = "Install update"
+	}
+	update := fyne.NewMenuItem(updateLabel, func() { u.ctrl.CheckForUpdates() })
 
 	quit := fyne.NewMenuItem("Quit", func() { u.ctrl.Quit() })
 	quit.IsQuit = true

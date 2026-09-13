@@ -5,6 +5,7 @@ go 1.22.0
 require (
 	fyne.io/fyne/v2 v2.8.1
 	github.com/coder/websocket v1.8.12
+	github.com/fynelabs/selfupdate v0.2.1
 	golang.org/x/sys v0.30.0
 )
 

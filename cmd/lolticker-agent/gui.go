@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"lolticker-agent/internal/agent"
 	"lolticker-agent/internal/config"
@@ -12,6 +13,7 @@ import (
 	"lolticker-agent/internal/relay"
 	"lolticker-agent/internal/singleton"
 	"lolticker-agent/internal/ui"
+	"lolticker-agent/internal/updater"
 )
 
 // controller adapts the running app to what the window needs. It is the only
@@ -25,6 +27,7 @@ type controller struct {
 	configPath string
 	version    string
 	quit       func()
+	up         *updater.Updater
 
 	cfg config.Config
 }
@@ -49,12 +52,17 @@ func (c *controller) Save(cfg config.Config) error {
 	return nil
 }
 
-// CheckForUpdates is wired in the updater step of the v3 scope. It logs for
-// now so the button is honest about doing nothing yet rather than silently
-// pretending.
-func (c *controller) CheckForUpdates() {
-	c.log.Info("update check requested, but the updater is not wired in yet")
+// CheckForUpdates is the explicit click. The updater declines to apply
+// anything on its own; this is the only path that installs.
+func (c *controller) CheckForUpdates() string {
+	if !c.up.Enabled() {
+		return "This build cannot update itself. Download a new version manually."
+	}
+	return c.up.Install()
 }
+
+// UpdateState is the quiet marker the window and tray render.
+func (c *controller) UpdateState() updater.State { return c.up.State() }
 
 // runFrontend for the desktop build: the window and the tray.
 //
@@ -62,7 +70,10 @@ func (c *controller) CheckForUpdates() {
 // instance listener is served here too, which is what makes a second launch
 // raise this window instead of starting a second agent.
 func runFrontend(ctx context.Context, deps frontendDeps) {
+	up := updater.New(updater.PublicKey(), updater.ReleaseURL, deps.version, deps.log)
+
 	c := &controller{
+		up:         up,
 		ag:         deps.agent,
 		rl:         deps.relay,
 		logs:       deps.logs,
@@ -74,6 +85,17 @@ func runFrontend(ctx context.Context, deps frontendDeps) {
 	}
 
 	w := ui.New(c)
+	up.OnChange(func(updater.State) { w.RefreshUpdate() })
+	go up.Start(ctx)
+
+	// The updater must never apply anything mid-match, so it watches the same
+	// state channel the window does.
+	go func() {
+		for st := range watchStates(ctx, deps.agent) {
+			up.SetLive(st == agent.StatusLive)
+		}
+	}()
+
 	go deps.lock.Serve(func() {
 		deps.log.Info("another instance asked for the window")
 		w.Show()
@@ -88,3 +110,30 @@ var _ = singleton.Port
 
 // guiBuild tells main whether a window exists to ask the user things.
 const guiBuild = true
+
+// watchStates re-broadcasts just the status, so the updater can gate on "is a
+// game running" without competing with the window for the state channel.
+func watchStates(ctx context.Context, ag *agent.Agent) <-chan agent.Status {
+	out := make(chan agent.Status, 1)
+	go func() {
+		defer close(out)
+		t := time.NewTicker(2 * time.Second)
+		defer t.Stop()
+		var last agent.Status
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if cur := ag.Status(); cur != last {
+					last = cur
+					select {
+					case out <- cur:
+					default:
+					}
+				}
+			}
+		}
+	}()
+	return out
+}

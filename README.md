@@ -108,16 +108,80 @@ Leave the agent running — it polls every 5 s while you are out of a game and
 once a second while you are in one, and returns to idle when the game ends.
 Ctrl-C closes the connection cleanly.
 
+## The desktop app
+
+Running the agent with no flags opens a window: status, your share link, the
+token field, the settings toggles and a log tail. Closing the window hides it
+to the tray and the agent keeps streaming — **Quit in the tray menu is the only
+thing that actually stops it.** The tray icon tells you the state at a glance:
+
+| Icon | Meaning |
+|---|---|
+| Ring | Offline — not connected to the relay |
+| Solid dot | Online — connected, no game |
+| Dot with a notch | In a game, streaming |
+| Triangle | Something is wrong; open the window to read it |
+
+They differ by shape rather than colour, because a tray renders them at 16 px
+against a background nobody controls.
+
+Only one agent runs at a time. Launching a second one raises the first one's
+window and exits — two agents would fight over the relay connection forever,
+since the relay drops the older connection whenever a new one authenticates
+with the same token.
+
+### Headless
+
+`go build -tags nogui` produces a pure-Go, cgo-free binary with no display
+dependency and no Fyne in it at all. Use it on a headless box, or when you want
+the smallest thing to audit. `--once` and `--dump` behave identically in both
+builds.
+
+## Things Windows will do to you
+
+**SmartScreen.** The release binaries are not code-signed — an Authenticode
+certificate costs real money every year and this is a hobby project. Windows
+will therefore warn you when you download and first run it. Click "More info"
+then "Run anyway", or verify the download yourself first: every release ships a
+`SHA256SUMS` file beside the binaries.
+
+**Antivirus false positives.** A Go binary that does network I/O and rewrites
+itself is a common heuristic false positive. There is no code fix; if it
+happens, it gets submitted to Microsoft's false-positive form.
+
+**A `.old` file.** After an update you will see `lolticker-agent.exe.old` next
+to the binary. Windows will not let a running executable be deleted, so the
+updater renames the previous version instead. It is harmless and you can delete
+it once the new version has started.
+
+## Updates
+
+The agent checks for a new release every six hours and, if it finds one, shows
+a quiet line in the window and a menu item in the tray. **Nothing downloads or
+installs until you click it**, and nothing is ever applied while you are in a
+game — if you click during a match it waits until the game ends.
+
+Every release is signed with an ed25519 key whose public half is compiled into
+the binary, so an update that is not signed by the real key cannot be applied.
+
 ## Build from source
 
-Requires Go 1.22+. No CGO, no code generation, one dependency
-(`github.com/coder/websocket`).
+Requires Go 1.22+. The desktop build needs cgo and OpenGL, because Fyne does;
+the headless build needs neither.
 
 ```bash
-go mod tidy
 go test ./...
-go build -o lolticker-agent ./cmd/lolticker-agent
+
+# desktop (needs a C compiler; -H=windowsgui stops a console window appearing)
+go build -ldflags "-H=windowsgui" -o lolticker-agent.exe ./cmd/lolticker-agent
+
+# headless, pure Go
+CGO_ENABLED=0 go build -tags nogui -o lolticker-agent ./cmd/lolticker-agent
 ```
+
+On Linux the desktop build also needs `libgl1-mesa-dev` and `xorg-dev`. There
+is no cross-compiling the desktop build: it is built natively per platform in
+CI.
 
 To verify a published release, build it yourself with the tag checked out and
 compare against the published SHA-256:

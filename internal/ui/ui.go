@@ -23,6 +23,7 @@ import (
 	"lolticker-agent/internal/agent"
 	"lolticker-agent/internal/autostart"
 	"lolticker-agent/internal/config"
+	"lolticker-agent/internal/updater"
 )
 
 // AppID must be a fixed reverse-DNS string: NewWithID, not New, is what makes
@@ -47,8 +48,11 @@ type Controller interface {
 	LogText() string
 	// Version is the build version string.
 	Version() string
-	// CheckForUpdates is wired in the v3 updater step.
-	CheckForUpdates()
+	// CheckForUpdates is the explicit install click. It returns the message to
+	// show the user.
+	CheckForUpdates() string
+	// UpdateState is the quiet marker: never a modal, never focus-stealing.
+	UpdateState() updater.State
 	// Quit shuts the whole app down.
 	Quit()
 }
@@ -75,7 +79,8 @@ type UI struct {
 	// Token
 	tokenEntry *widget.Entry
 
-	logView *widget.Entry
+	logView     *widget.Entry
+	updateLabel *widget.Label
 
 	cur agent.State
 }
@@ -118,6 +123,36 @@ func (u *UI) Show() {
 		u.win.Show()
 		u.win.RequestFocus()
 	})
+}
+
+// RefreshUpdate redraws the update marker. Safe from any goroutine, because
+// the updater calls it from its own.
+func (u *UI) RefreshUpdate() {
+	fyne.Do(func() {
+		st := u.ctrl.UpdateState()
+		u.updateLabel.SetText(updateMessage(st))
+		if u.updateLabel.Text == "" {
+			u.updateLabel.Hide()
+		} else {
+			u.updateLabel.Show()
+		}
+		u.refreshTray()
+	})
+}
+
+// updateMessage is deliberately a line of text in the window, not a dialog.
+// Stealing focus mid-game is unforgivable for a tool whose users are, by
+// definition, in a match.
+func updateMessage(st updater.State) string {
+	switch {
+	case st.Message != "":
+		return st.Message
+	case st.Pending:
+		return "Update ready — it will install when your game ends."
+	case st.Available:
+		return "A new version is available. Use Check for updates to install it."
+	}
+	return ""
 }
 
 // refreshLog pulls the log tail into the view. The log moves independently of

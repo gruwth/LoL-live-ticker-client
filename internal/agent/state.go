@@ -72,6 +72,16 @@ func newStates() *states {
 	}
 }
 
+// Status returns the current status without consuming the channel. The channel
+// has one consumer by design; anything else that needs to react to status,
+// like the updater gating on a live game, reads it here instead of competing
+// for values.
+func (a *Agent) Status() Status {
+	a.states.mu.Lock()
+	defer a.states.mu.Unlock()
+	return a.states.cur.Status
+}
+
 // States returns the channel front ends consume. Headless mode logs
 // transitions from it; the GUI feeds it to the window and tray.
 func (a *Agent) States() <-chan State { return a.states.ch }

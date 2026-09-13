@@ -182,7 +182,13 @@ func (u *UI) buildLog() fyne.CanvasObject {
 func (u *UI) buildFooter() fyne.CanvasObject {
 	version := widget.NewLabel(u.ctrl.Version())
 
-	check := widget.NewButton("Check for updates", func() { u.ctrl.CheckForUpdates() })
+	u.updateLabel = widget.NewLabel("")
+	u.updateLabel.Wrapping = fyne.TextWrapWord
+	u.updateLabel.Hide()
+
+	check := widget.NewButton("Check for updates", func() {
+		dialog.ShowInformation("Updates", u.ctrl.CheckForUpdates(), u.win)
+	})
 	check.Importance = widget.LowImportance
 
 	// The config path is worth showing, but not worth two wrapped lines of
@@ -190,7 +196,10 @@ func (u *UI) buildFooter() fyne.CanvasObject {
 	openCfg := widget.NewButton("Config file", func() { u.openConfigDir() })
 	openCfg.Importance = widget.LowImportance
 
-	return container.NewVBox(container.NewHBox(version, check, openCfg))
+	return container.NewVBox(
+		u.updateLabel,
+		container.NewHBox(version, check, openCfg),
+	)
 }
 
 func boldLabel(s string) *widget.Label {
