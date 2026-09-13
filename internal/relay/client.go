@@ -22,6 +22,15 @@ import (
 // ErrUnauthorized is permanent: a wrong token must not retry forever.
 var ErrUnauthorized = errors.New("relay rejected the token")
 
+// Status is what this package reports to whoever is watching. It carries no
+// reference to the agent or any UI; main adapts it.
+type Status struct {
+	Connected bool
+	ShareURL  string
+	LatencyMS int
+	Err       string
+}
+
 const (
 	pingEvery   = 20 * time.Second
 	pongTimeout = 10 * time.Second
@@ -35,6 +44,10 @@ type Client struct {
 	token   string
 	version string
 	log     *slog.Logger
+
+	onStatus func(Status)
+	statusMu sync.Mutex
+	status   Status
 
 	mu       sync.Mutex
 	snapshot *wire.Envelope // latest only - stale snapshots are worthless
@@ -52,6 +65,39 @@ func New(url, token, version string, log *slog.Logger) *Client {
 		log:     log,
 		wake:    make(chan struct{}, 1),
 	}
+}
+
+// OnStatus registers the callback that receives connection changes. It must
+// be set before Run and is called from the client's own goroutines.
+func (c *Client) OnStatus(fn func(Status)) { c.onStatus = fn }
+
+// mutate applies a change to the status and hands a copy to the callback.
+// Status is touched from the session, read and ping goroutines, so it has its
+// own lock; the callback runs outside that lock so a front end that calls back
+// into this client cannot deadlock.
+func (c *Client) mutate(fn func(*Status)) {
+	c.statusMu.Lock()
+	fn(&c.status)
+	snap := c.status
+	c.statusMu.Unlock()
+	if c.onStatus != nil {
+		c.onStatus(snap)
+	}
+}
+
+// setConnected updates connectivity. Latency is cleared on disconnect so the
+// UI cannot show a stale number as if it were current.
+func (c *Client) setConnected(up bool) {
+	c.mutate(func(s *Status) {
+		s.Connected = up
+		if up {
+			// A reconnect means whatever went wrong before is over. An
+			// unauthorized failure never reaches here: it exits instead.
+			s.Err = ""
+		} else {
+			s.LatencyMS = 0
+		}
+	})
 }
 
 // Send queues one message. It never blocks: while disconnected only the newest
@@ -140,12 +186,17 @@ func (c *Client) session(ctx context.Context) (connected bool, err error) {
 	})
 	if err != nil {
 		if resp != nil && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
+			c.mutate(func(s *Status) { s.Err = "the relay rejected this token" })
 			return false, fmt.Errorf("%w: http %d", ErrUnauthorized, resp.StatusCode)
 		}
 		return false, fmt.Errorf("dial %s: %w", c.url, err)
 	}
-	defer conn.CloseNow()
+	defer func() {
+		conn.CloseNow()
+		c.setConnected(false)
+	}()
 	c.log.Info("relay connected", "url", c.url)
+	c.setConnected(true)
 
 	connCtx, stop := context.WithCancelCause(ctx)
 	defer stop(nil)
@@ -266,8 +317,16 @@ func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn, stop contex
 		switch msg.Type {
 		case "ok":
 			c.log.Debug("relay ok")
+			if msg.ShareURL != "" {
+				c.mutate(func(s *Status) { s.ShareURL = msg.ShareURL })
+			}
 		case "error":
 			c.log.Error("relay error", "code", msg.Code, "msg", msg.Msg)
+			c.mutate(func(s *Status) {
+				if s.Err = msg.Msg; s.Err == "" {
+					s.Err = msg.Code
+				}
+			})
 			if msg.Code == "unauthorized" {
 				stop(fmt.Errorf("%w: %s", ErrUnauthorized, msg.Msg))
 				conn.Close(websocket.StatusPolicyViolation, "unauthorized")
@@ -286,8 +345,13 @@ func (c *Client) pingLoop(ctx context.Context, conn *websocket.Conn, stop contex
 			return
 		case <-t.C:
 			pctx, cancel := context.WithTimeout(ctx, pongTimeout)
+			sent := time.Now()
 			err := conn.Ping(pctx)
 			cancel()
+			if err == nil {
+				ms := int(time.Since(sent).Milliseconds())
+				c.mutate(func(s *Status) { s.LatencyMS = ms })
+			}
 			if err != nil && ctx.Err() == nil {
 				stop(fmt.Errorf("ping: %w", err))
 				return

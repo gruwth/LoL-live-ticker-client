@@ -115,4 +115,7 @@ type ServerMessage struct {
 	Type string `json:"type"` // "ok" | "error"
 	Code string `json:"code,omitempty"`
 	Msg  string `json:"msg,omitempty"`
+	// ShareURL is the public page for this agent. The relay only derives a
+	// slug once a Riot ID is bound, so it is empty before the first game.
+	ShareURL string `json:"shareUrl,omitempty"`
 }

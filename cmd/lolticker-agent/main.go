@@ -21,6 +21,7 @@ import (
 	"lolticker-agent/internal/config"
 	"lolticker-agent/internal/relay"
 	"lolticker-agent/internal/riot"
+	"lolticker-agent/internal/singleton"
 	"lolticker-agent/internal/transform"
 )
 
@@ -39,6 +40,7 @@ func run() error {
 		server      = flag.String("server", "", "relay WebSocket URL")
 		token       = flag.String("token", "", "agent token (env LOLTICKER_TOKEN also accepted)")
 		noActive    = flag.Bool("no-active", false, "do not send gold/stats/abilities of the local player")
+		_           = flag.Bool("minimized", false, "start hidden in the tray (GUI builds only)")
 		dump        = flag.String("dump", "", "record raw allgamedata to a JSONL file instead of sending")
 		once        = flag.Bool("once", false, "single poll, print lean snapshot to stdout, exit")
 		verbose     = flag.Bool("verbose", false, "debug logging")
@@ -75,14 +77,42 @@ func run() error {
 		return err
 	}
 
+	// One agent per machine: two fight over the relay connection forever,
+	// because the relay closes the older one whenever a new one authenticates.
+	lock, err := singleton.Acquire()
+	if errors.Is(err, singleton.ErrAlreadyRunning) {
+		if err := singleton.Show(); err != nil {
+			return fmt.Errorf("another instance is running but would not respond: %w", err)
+		}
+		log.Debug("another instance is already running; asked it to show its window")
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("single-instance lock: %w", err)
+	}
+	defer lock.Close()
+
 	rl := relay.New(cfg.Server, cfg.Token, version, log)
 	ag := agent.New(rc, rl, cfg.ShareActivePlayer, log)
+	// The core never learns what a front end is; main is the only place the
+	// two halves meet.
+	rl.OnStatus(func(s relay.Status) {
+		ag.SetRelayState(agent.RelayState{
+			Connected: s.Connected,
+			ShareURL:  s.ShareURL,
+			LatencyMS: s.LatencyMS,
+			Err:       s.Err,
+		})
+	})
 
 	log.Info("starting", "version", version, "server", cfg.Server, "shareActivePlayer", cfg.ShareActivePlayer)
 
 	errs := make(chan error, 2)
 	go func() { errs <- rl.Run(ctx) }()
 	go func() { errs <- ag.Run(ctx) }()
+
+	// runFrontend is the only thing that differs between the GUI and headless
+	// builds. It returns when ctx is done.
+	go runFrontend(ctx, lock, ag, log)
 
 	err = <-errs
 	stop()
