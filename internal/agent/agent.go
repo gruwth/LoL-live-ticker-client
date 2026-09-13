@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"hash/fnv"
 	"log/slog"
+	"sync"
 	"time"
 
 	"lolticker-agent/internal/quest"
@@ -30,12 +31,14 @@ type Sender interface {
 }
 
 type Agent struct {
-	riot    *riot.Client
-	out     Sender
-	active  bool // include the local player's gold/stats/abilities
-	quests  *quest.Tracker
-	log     *slog.Logger
-	nowFunc func() time.Time
+	riot     *riot.Client
+	out      Sender
+	activeMu sync.RWMutex
+	active   bool // include the local player's gold/stats/abilities
+	quests   *quest.Tracker
+	states   *states
+	log      *slog.Logger
+	nowFunc  func() time.Time
 }
 
 func New(rc *riot.Client, out Sender, includeActive bool, log *slog.Logger) *Agent {
@@ -48,10 +51,30 @@ func New(rc *riot.Client, out Sender, includeActive bool, log *slog.Logger) *Age
 		out:     out,
 		active:  includeActive,
 		quests:  quest.NewTracker(),
+		states:  newStates(),
 		log:     log,
 		nowFunc: time.Now,
 	}
 }
+
+// SetShareActivePlayer applies the privacy toggle without a restart. It is
+// read once per tick, so the next snapshot already reflects it.
+func (a *Agent) SetShareActivePlayer(v bool) {
+	a.activeMu.Lock()
+	a.active = v
+	a.activeMu.Unlock()
+}
+
+func (a *Agent) shareActive() bool {
+	a.activeMu.RLock()
+	defer a.activeMu.RUnlock()
+	return a.active
+}
+
+// SetRelayState is how the network half reports in. main wires this to the
+// relay client's status callback, which keeps internal/relay out of this
+// package's imports and this package out of the UI's.
+func (a *Agent) SetRelayState(rs RelayState) { a.states.setRelay(rs) }
 
 type state int
 
@@ -111,6 +134,7 @@ func (a *Agent) Run(ctx context.Context) error {
 					a.out.Send(wire.TypeGameEnd, wire.GameEnd{})
 					st, misses, lastSeenEvt, lastHash = stateIdle, 0, transform.NoEventsSeen, 0
 					a.quests.Reset()
+					a.states.setGame(false, "", 0)
 					lastIdle = time.Time{}
 				}
 				continue
@@ -131,7 +155,12 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		// Snapshot first, then the events that produced it, so a client that
 		// renders the feed sees the state the events refer to.
-		snap := transform.Snapshot(data, a.active)
+		snap := transform.Snapshot(data, a.shareActive())
+		// RiotID comes from the raw payload, not the snapshot: the user may
+		// have opted out of sharing active-player data, but the front end
+		// still needs to show whose game this is.
+		a.states.setGame(true, data.ActivePlayer.RiotID, snap.Game.Time)
+
 		if b, err := json.Marshal(snap); err != nil {
 			a.log.Error("marshal snapshot", "err", err)
 		} else {
@@ -163,6 +192,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			a.out.Send(wire.TypeGameEnd, end)
 			st, lastSeenEvt, lastHash = stateIdle, transform.NoEventsSeen, 0
 			a.quests.Reset()
+			a.states.setGame(false, "", 0)
 			lastIdle = time.Time{}
 		}
 	}

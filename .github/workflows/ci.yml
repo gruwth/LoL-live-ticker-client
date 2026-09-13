@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # The headless build is the one that must never need a display or a C
+  # compiler. Running it on its own catches a stray Fyne import in the core
+  # immediately, which is the failure mode the nogui tag exists to prevent.
+  headless:
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Vet
+        run: go vet -tags nogui ./...
+      - name: Test
+        run: go test -tags nogui ./...
+      - name: Build (must be cgo-free)
+        run: go build -tags nogui ./cmd/lolticker-agent
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+  # The race detector needs cgo, so this job is separate from the one that
+  # proves the binary builds without it.
+  race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install GUI build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev
+      - name: Test with the race detector
+        run: go test -race ./...
+
+  # Fyne needs cgo and OpenGL, so the desktop build cannot be cross-compiled.
+  # It is built natively on each platform instead.
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            ldflags: '-H=windowsgui'
+          - os: ubuntu-latest
+            ldflags: ''
+          - os: macos-latest
+            ldflags: ''
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install X11 and GL headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev
+      - name: Build
+        run: go build -ldflags "${{ matrix.ldflags }}" ./cmd/lolticker-agent

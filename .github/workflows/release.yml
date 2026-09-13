@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  # Native per-platform builds: the pure-Go static cross-compile is gone the
+  # moment Fyne is in the binary, so there is no building Windows from Linux.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            goos: windows
+            ext: '.exe'
+            ldflags: '-H=windowsgui'
+          - os: ubuntu-latest
+            goos: linux
+            ext: ''
+            ldflags: ''
+          - os: macos-latest
+            goos: darwin
+            ext: ''
+            ldflags: ''
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install X11 and GL headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Build
+        shell: bash
+        run: |
+          name="lolticker-agent-${{ matrix.goos }}-amd64${{ matrix.ext }}"
+          go build -trimpath \
+            -ldflags "${{ matrix.ldflags }} -X main.version=${GITHUB_REF_NAME}" \
+            -o "$name" ./cmd/lolticker-agent
+          echo "ASSET=$name" >> "$GITHUB_ENV"
+
+      # The headless build ships too: it is the smallest auditable form of the
+      # agent and the only one that runs on a box with no display.
+      - name: Build headless
+        if: matrix.goos == 'linux'
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          go build -trimpath -tags nogui \
+            -ldflags "-X main.version=${GITHUB_REF_NAME}" \
+            -o lolticker-agent-linux-amd64-headless ./cmd/lolticker-agent
+
+      # Signing. The private key exists only as an Actions secret and never in
+      # the repo; the matching public key is embedded in the binary, so an
+      # update that is not signed by this key cannot be applied.
+      - name: Sign
+        shell: bash
+        env:
+          UPDATE_KEY: ${{ secrets.UPDATE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$UPDATE_KEY" ]; then
+            echo "::error::UPDATE_PRIVATE_KEY is not set; releases would ship unverifiable updates"
+            exit 1
+          fi
+          go run github.com/fynelabs/selfupdate/cmd/selfupdatectl@latest \
+            sign-binary --private-key-env UPDATE_KEY "$ASSET"
+
+      # Published beside every release so the cautious can verify a download,
+      # which is the only answer available to SmartScreen on an unsigned exe.
+      - name: Checksums
+        shell: bash
+        run: |
+          if command -v sha256sum >/dev/null; then
+            sha256sum lolticker-agent-* > "SHA256SUMS-${{ matrix.goos }}.txt"
+          else
+            shasum -a 256 lolticker-agent-* > "SHA256SUMS-${{ matrix.goos }}.txt"
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            lolticker-agent-*
+            SHA256SUMS-*.txt
