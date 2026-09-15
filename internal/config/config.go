@@ -14,6 +14,11 @@ type Config struct {
 	Token             string `json:"token"`
 	ShareActivePlayer bool   `json:"shareActivePlayer"`
 
+	// LCU reads the League Client API for queue status and champ select. Off
+	// by default: it is a wider surface than the in-game API and the user has
+	// to ask for it.
+	LCU bool `json:"lcu"`
+
 	// Desktop-only settings. They are ignored by a headless build, but are
 	// kept in the same file so one config describes the whole app.
 	DiscordRPC       bool `json:"discordRpc"`

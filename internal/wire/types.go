@@ -10,10 +10,12 @@ const Version = 1
 
 // Envelope types.
 const (
-	TypeSnapshot = "snapshot"
-	TypeEvents   = "events"
-	TypeGameEnd  = "gameEnd"
-	TypeIdle     = "idle"
+	TypeSnapshot    = "snapshot"
+	TypeEvents      = "events"
+	TypeGameEnd     = "gameEnd"
+	TypeIdle        = "idle"
+	TypePhase       = "phase"
+	TypeChampSelect = "champselect"
 )
 
 // Envelope is one JSON message per WebSocket text frame, agent -> relay.
@@ -121,6 +123,30 @@ type Event struct {
 	Result    string   `json:"result,omitempty"`
 	Synthetic bool     `json:"syn,omitempty"`   // agent-inferred, not reported by Riot
 	Quest     string   `json:"quest,omitempty"` // "top" | "mid" | "bot"
+}
+
+// Phase is where the user is in the client: queueing, in champ select, in a
+// game. It comes from the League Client API, which is opt-in.
+type Phase struct {
+	Phase string `json:"phase"` // none|lobby|matchmaking|readycheck|champselect|ingame|endofgame
+	Queue string `json:"queue,omitempty"`
+}
+
+// CSPlayer is one seat in champ select.
+type CSPlayer struct {
+	Slot       int    `json:"slot"`
+	Label      string `json:"label"` // camp name, "Ally 2", or a real name ONLY for owner/party
+	IsOwner    bool   `json:"isOwner,omitempty"`
+	ChampionID int    `json:"championId"` // 0 until locked - NEVER a hover
+	Locked     bool   `json:"locked"`
+}
+
+type ChampSelect struct {
+	Queue     string     `json:"queue"`
+	Ranked    bool       `json:"ranked"`
+	Bans      []int      `json:"bans"`
+	MyTeam    []CSPlayer `json:"myTeam"`
+	TheirTeam []CSPlayer `json:"theirTeam"`
 }
 
 // GameEnd is the payload of a gameEnd envelope: {"result":"Win"} or {}.
