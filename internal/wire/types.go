@@ -84,6 +84,24 @@ type Active struct {
 	MaxHP     float64            `json:"maxHp"`
 	Stats     map[string]float64 `json:"stats,omitempty"`
 	Abilities map[string]int     `json:"abilities,omitempty"` // {"Q":3,"W":1,...}
+	// FullRunes lives inside Active on purpose: the existing "share my gold
+	// and stats" toggle nulls the whole of Active, so it gates the rune page
+	// with no new flag and no new code path.
+	FullRunes *FullRunes `json:"fullRunes,omitempty"`
+}
+
+type Rune struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type FullRunes struct {
+	Keystone      Rune   `json:"keystone"`
+	Primary       []Rune `json:"primary"`   // 3 minor runes after the keystone
+	Secondary     []Rune `json:"secondary"` // 2
+	Shards        []int  `json:"shards"`    // 3 stat shard perk IDs
+	PrimaryTree   string `json:"primaryTree"`
+	SecondaryTree string `json:"secondaryTree"`
 }
 
 type Event struct {

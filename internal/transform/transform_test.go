@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"lolticker-agent/internal/riot"
+	"lolticker-agent/internal/wire"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden files")
@@ -145,5 +146,66 @@ func TestEventsStolenParsed(t *testing.T) {
 	got, _ := Events(raw, NoEventsSeen)
 	if len(got) != 1 || !got[0].Stolen {
 		t.Errorf(`Stolen not parsed from "True": %+v`, got)
+	}
+}
+
+func TestFullRunesSplit(t *testing.T) {
+	s := Snapshot(loadFixture(t), true)
+	if s.Active == nil || s.Active.FullRunes == nil {
+		t.Fatal("fullRunes missing from active")
+	}
+	fr := s.Active.FullRunes
+
+	if fr.Keystone.ID != 8229 || fr.Keystone.Name != "Arcane Comet" {
+		t.Errorf("keystone = %+v", fr.Keystone)
+	}
+	if fr.PrimaryTree != "Sorcery" || fr.SecondaryTree != "Domination" {
+		t.Errorf("trees = %q / %q", fr.PrimaryTree, fr.SecondaryTree)
+	}
+	// generalRunes is [keystone, 3 primary, 2 secondary] with nothing marking
+	// the boundaries, so this split is the part that can silently go wrong.
+	if len(fr.Primary) != 3 || len(fr.Secondary) != 2 {
+		t.Fatalf("split gave %d primary and %d secondary, want 3 and 2", len(fr.Primary), len(fr.Secondary))
+	}
+	if fr.Primary[0].Name != "Manaflow Band" || fr.Primary[2].Name != "Scorch" {
+		t.Errorf("primary = %+v", fr.Primary)
+	}
+	if fr.Secondary[0].Name != "Relentless Hunter" || fr.Secondary[1].Name != "Taste of Blood" {
+		t.Errorf("secondary = %+v", fr.Secondary)
+	}
+	// The keystone must not also show up as a minor rune.
+	for _, r := range append(append([]wire.Rune{}, fr.Primary...), fr.Secondary...) {
+		if r.ID == fr.Keystone.ID {
+			t.Errorf("keystone %d leaked into the minor runes", r.ID)
+		}
+	}
+	if want := []int{5008, 5008, 5001}; len(fr.Shards) != 3 {
+		t.Errorf("shards = %v, want %v", fr.Shards, want)
+	}
+}
+
+// A short or empty rune block must not panic the positional split.
+func TestFullRunesTolerateShortLists(t *testing.T) {
+	for n := 0; n <= 6; n++ {
+		raw := loadFixture(t)
+		raw.ActivePlayer.FullRunes.GeneralRunes = raw.ActivePlayer.FullRunes.GeneralRunes[:n]
+		got := Snapshot(raw, true)
+		if got.Active == nil {
+			t.Fatalf("n=%d: active went missing", n)
+		}
+		fr := got.Active.FullRunes
+		if fr == nil {
+			continue // only valid when there is genuinely nothing
+		}
+		if len(fr.Primary) > 3 || len(fr.Secondary) > 2 {
+			t.Errorf("n=%d: split overran: %d primary, %d secondary", n, len(fr.Primary), len(fr.Secondary))
+		}
+	}
+}
+
+// The privacy toggle has to gate the rune page with no extra code path.
+func TestFullRunesGatedByShareActive(t *testing.T) {
+	if s := Snapshot(loadFixture(t), false); s.Active != nil {
+		t.Fatal("active survived the opt-out, so fullRunes would leak with it")
 	}
 }

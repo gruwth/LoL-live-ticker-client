@@ -94,6 +94,43 @@
       "Q": 3,
       "R": 1,
       "W": 2
+    },
+    "fullRunes": {
+      "keystone": {
+        "id": 8229,
+        "name": "Arcane Comet"
+      },
+      "primary": [
+        {
+          "id": 8226,
+          "name": "Manaflow Band"
+        },
+        {
+          "id": 8234,
+          "name": "Celerity"
+        },
+        {
+          "id": 8237,
+          "name": "Scorch"
+        }
+      ],
+      "secondary": [
+        {
+          "id": 8105,
+          "name": "Relentless Hunter"
+        },
+        {
+          "id": 8139,
+          "name": "Taste of Blood"
+        }
+      ],
+      "shards": [
+        5008,
+        5008,
+        5001
+      ],
+      "primaryTree": "Sorcery",
+      "secondaryTree": "Domination"
     }
   }
 }

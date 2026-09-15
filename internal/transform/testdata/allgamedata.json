@@ -20,6 +20,78 @@
       "resourceMax": 480,
       "resourceValue": 240.5
     },
+    "fullRunes": {
+          "generalRunes": [
+                {
+                      "displayName": "Arcane Comet",
+                      "id": 8229,
+                      "rawDescription": "perk_tooltip_ArcaneComet",
+                      "rawDisplayName": "perk_displayname_ArcaneComet"
+                },
+                {
+                      "displayName": "Manaflow Band",
+                      "id": 8226,
+                      "rawDescription": "perk_tooltip_8226",
+                      "rawDisplayName": "perk_displayname_8226"
+                },
+                {
+                      "displayName": "Celerity",
+                      "id": 8234,
+                      "rawDescription": "perk_tooltip_Celerity",
+                      "rawDisplayName": "perk_displayname_Celerity"
+                },
+                {
+                      "displayName": "Scorch",
+                      "id": 8237,
+                      "rawDescription": "perk_tooltip_Scorch",
+                      "rawDisplayName": "perk_displayname_Scorch"
+                },
+                {
+                      "displayName": "Relentless Hunter",
+                      "id": 8105,
+                      "rawDescription": "perk_tooltip_8105",
+                      "rawDisplayName": "perk_displayname_8105"
+                },
+                {
+                      "displayName": "Taste of Blood",
+                      "id": 8139,
+                      "rawDescription": "perk_tooltip_TasteOfBlood",
+                      "rawDisplayName": "perk_displayname_TasteOfBlood"
+                }
+          ],
+          "keystone": {
+                "displayName": "Arcane Comet",
+                "id": 8229,
+                "rawDescription": "perk_tooltip_ArcaneComet",
+                "rawDisplayName": "perk_displayname_ArcaneComet"
+          },
+          "primaryRuneTree": {
+                "displayName": "Sorcery",
+                "id": 8200,
+                "rawDescription": "perkstyle_tooltip_7202",
+                "rawDisplayName": "perkstyle_displayname_7202"
+          },
+          "secondaryRuneTree": {
+                "displayName": "Domination",
+                "id": 8100,
+                "rawDescription": "perkstyle_tooltip_7200",
+                "rawDisplayName": "perkstyle_displayname_7200"
+          },
+          "statRunes": [
+                {
+                      "id": 5008,
+                      "rawDescription": "perk_tooltip_StatModAdaptive"
+                },
+                {
+                      "id": 5008,
+                      "rawDescription": "perk_tooltip_StatModAdaptive"
+                },
+                {
+                      "id": 5001,
+                      "rawDescription": "perk_tooltip_StatModHealthScaling"
+                }
+          ]
+    },
     "currentGold": 1337.5,
     "level": 6,
     "riotId": "Gruwth#EUW",
