@@ -138,6 +138,15 @@ func run() error {
 	go func() { errs <- rl.Run(ctx) }()
 	go func() { errs <- ag.Run(ctx) }()
 
+	// The League Client integration is opt-in and off by default. With it off
+	// nothing here is constructed, so there is no process scan and no request
+	// -- the feature is absent rather than idle.
+	if cfg.LCU {
+		go agent.NewLCUWatch(rl, log).Run(ctx)
+	} else {
+		log.Debug("league client integration is off")
+	}
+
 	deps := frontendDeps{
 		agent:          ag,
 		relay:          rl,

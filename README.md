@@ -15,7 +15,39 @@ Exactly one endpoint, on loopback only:
 
 - `https://127.0.0.1:2999/liveclientdata/allgamedata`
 
-That is the entire list. See [`internal/riot/client.go`](internal/riot/client.go).
+That is the entire list while the League client integration is off, which is
+how it ships. See [`internal/riot/client.go`](internal/riot/client.go).
+
+### League client access (off by default)
+
+Turning on "Read queue status and champ select from the League client" adds
+**exactly two** endpoints, both on loopback:
+
+- `/lol-gameflow/v1/gameflow-phase` — one word saying whether you are in a
+  lobby, queueing, in champ select or in a game.
+- `/lol-champ-select/v1/session` — the draft: bans and locked picks.
+
+Nothing else is read. The League client API also exposes chat, your friends
+list and your match history; this agent never touches them. That is not just a
+promise in a README — the two paths above are an allowlist in
+[`internal/lcu/client.go`](internal/lcu/client.go) and any other path is
+refused before a request is made, with a test that fails if the list grows.
+
+The port and password the client uses change every time you restart it. They
+are read from the client's own command line through the operating system's
+process table. **Nothing here reads another process's memory** — that is what
+Riot's Vanguard blocks, and this agent must never start doing it.
+
+Two things are filtered out before anything is sent, in the agent, on your
+machine:
+
+- **Hovered champions.** Only locked picks are sent. A lock is already mutual
+  knowledge to both teams the moment it happens; a hover is visible only to
+  your own team, and broadcasting it would hand an opponent information the
+  game deliberately withholds. Picks are read from completed draft actions, so
+  there is no code path by which a hover could reach the wire.
+- **Other players' names.** Only your own name is ever sent. Everyone else is
+  `Ally 2`, `Enemy 4` and so on, in every queue — not just ranked.
 
 ## What it sends
 
@@ -29,13 +61,20 @@ To the one server in your config file, over a single WebSocket:
 - `gameEnd` — win/lose when the game is over.
 - `idle` — a heartbeat every 30 s while you are not in a game.
 
+With League client access on, two more:
+
+- `phase` — which stage of the queue you are in, sent when it changes.
+- `champselect` — bans and locked picks, sent when they change.
+
 Optionally (`shareActivePlayer`, on by default) a `snapshot` also carries your
-own gold, current/max HP, champion stats and ability ranks. Turn it off with
-`--no-active` or `"shareActivePlayer": false`.
+own gold, current/max HP, champion stats, ability ranks and full rune page.
+Turn it off with `--no-active` or `"shareActivePlayer": false` — that one
+switch covers all of it, including the runes, and takes effect immediately
+without a restart.
 
 ## What it does not send
 
-No file contents, no process list, no hardware info, no account credentials, no
+No file contents, no hardware info, no account credentials, no
 chat, no telemetry or crash reporting, no analytics of any kind. Item and spell
 descriptions, and your rune pages, are dropped in the transform step and never
 leave the process. There is no second network destination: the only outbound

@@ -10,10 +10,12 @@ const Version = 1
 
 // Envelope types.
 const (
-	TypeSnapshot = "snapshot"
-	TypeEvents   = "events"
-	TypeGameEnd  = "gameEnd"
-	TypeIdle     = "idle"
+	TypeSnapshot    = "snapshot"
+	TypeEvents      = "events"
+	TypeGameEnd     = "gameEnd"
+	TypeIdle        = "idle"
+	TypePhase       = "phase"
+	TypeChampSelect = "champselect"
 )
 
 // Envelope is one JSON message per WebSocket text frame, agent -> relay.
@@ -84,6 +86,24 @@ type Active struct {
 	MaxHP     float64            `json:"maxHp"`
 	Stats     map[string]float64 `json:"stats,omitempty"`
 	Abilities map[string]int     `json:"abilities,omitempty"` // {"Q":3,"W":1,...}
+	// FullRunes lives inside Active on purpose: the existing "share my gold
+	// and stats" toggle nulls the whole of Active, so it gates the rune page
+	// with no new flag and no new code path.
+	FullRunes *FullRunes `json:"fullRunes,omitempty"`
+}
+
+type Rune struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type FullRunes struct {
+	Keystone      Rune   `json:"keystone"`
+	Primary       []Rune `json:"primary"`   // 3 minor runes after the keystone
+	Secondary     []Rune `json:"secondary"` // 2
+	Shards        []int  `json:"shards"`    // 3 stat shard perk IDs
+	PrimaryTree   string `json:"primaryTree"`
+	SecondaryTree string `json:"secondaryTree"`
 }
 
 type Event struct {
@@ -103,6 +123,30 @@ type Event struct {
 	Result    string   `json:"result,omitempty"`
 	Synthetic bool     `json:"syn,omitempty"`   // agent-inferred, not reported by Riot
 	Quest     string   `json:"quest,omitempty"` // "top" | "mid" | "bot"
+}
+
+// Phase is where the user is in the client: queueing, in champ select, in a
+// game. It comes from the League Client API, which is opt-in.
+type Phase struct {
+	Phase string `json:"phase"` // none|lobby|matchmaking|readycheck|champselect|ingame|endofgame
+	Queue string `json:"queue,omitempty"`
+}
+
+// CSPlayer is one seat in champ select.
+type CSPlayer struct {
+	Slot       int    `json:"slot"`
+	Label      string `json:"label"` // camp name, "Ally 2", or a real name ONLY for owner/party
+	IsOwner    bool   `json:"isOwner,omitempty"`
+	ChampionID int    `json:"championId"` // 0 until locked - NEVER a hover
+	Locked     bool   `json:"locked"`
+}
+
+type ChampSelect struct {
+	Queue     string     `json:"queue"`
+	Ranked    bool       `json:"ranked"`
+	Bans      []int      `json:"bans"`
+	MyTeam    []CSPlayer `json:"myTeam"`
+	TheirTeam []CSPlayer `json:"theirTeam"`
 }
 
 // GameEnd is the payload of a gameEnd envelope: {"result":"Win"} or {}.

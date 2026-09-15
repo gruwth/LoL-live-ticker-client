@@ -88,7 +88,25 @@ type ActivePlayer struct {
 	RiotID        string        `json:"riotId"`
 	ChampionStats ChampionStats `json:"championStats"`
 	Abilities     Abilities     `json:"abilities"`
-	// FullRunes omitted in MVP - large and not rendered yet.
+	FullRunes     FullRunes     `json:"fullRunes"`
+}
+
+// FullRunes is the spectated player's whole rune page. GeneralRunes arrives as
+// one flat list of six: the keystone, then the three minor runes of the
+// primary tree, then the two from the secondary. The client does not label
+// which is which, so the split is positional.
+type FullRunes struct {
+	GeneralRunes      []Rune     `json:"generalRunes"`
+	Keystone          Rune       `json:"keystone"`
+	PrimaryRuneTree   Rune       `json:"primaryRuneTree"`
+	SecondaryRuneTree Rune       `json:"secondaryRuneTree"`
+	StatRunes         []StatRune `json:"statRunes"`
+}
+
+// StatRune is a stat shard. Only the perk ID is meaningful; the name is a
+// localisation key rather than anything renderable.
+type StatRune struct {
+	ID int `json:"id"`
 }
 
 type ChampionStats struct {

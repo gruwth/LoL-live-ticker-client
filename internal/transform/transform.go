@@ -83,6 +83,7 @@ func Snapshot(raw *riot.AllGameData, includeActive bool) wire.Snapshot {
 				"E": a.Abilities.E.AbilityLevel,
 				"R": a.Abilities.R.AbilityLevel,
 			},
+			FullRunes: fullRunes(a.FullRunes),
 		}
 	}
 
@@ -156,6 +157,55 @@ func runes(r riot.Runes) *wire.Runes {
 		PrimaryTree: r.PrimaryRuneTree.DisplayName,
 		SecondTree:  r.SecondaryRuneTree.DisplayName,
 	}
+}
+
+// fullRunes strips the rune page down to IDs, names and the two tree names.
+// The raw block is about 1.5 KB of localisation keys; this is a few hundred
+// bytes.
+//
+// It is sent in every snapshot rather than once per game. Runes never change,
+// but a snapshot is replace-everything on reconnect, so sending it once would
+// leave a viewer who joined late without them permanently.
+func fullRunes(r riot.FullRunes) *wire.FullRunes {
+	if r.Keystone.ID == 0 && len(r.GeneralRunes) == 0 {
+		return nil
+	}
+
+	out := &wire.FullRunes{
+		Keystone:      wire.Rune{ID: r.Keystone.ID, Name: r.Keystone.DisplayName},
+		PrimaryTree:   r.PrimaryRuneTree.DisplayName,
+		SecondaryTree: r.SecondaryRuneTree.DisplayName,
+	}
+
+	// generalRunes is [keystone, 3 primary, 2 secondary] with nothing marking
+	// the boundaries, so the split is positional and has to tolerate a list
+	// that is shorter than expected rather than slicing past the end.
+	if n := len(r.GeneralRunes); n > 1 {
+		out.Primary = runeList(r.GeneralRunes[1:min(4, n)])
+		if n > 4 {
+			out.Secondary = runeList(r.GeneralRunes[4:min(6, n)])
+		}
+	}
+
+	for _, sr := range r.StatRunes {
+		out.Shards = append(out.Shards, sr.ID)
+	}
+	return out
+}
+
+func runeList(in []riot.Rune) []wire.Rune {
+	out := make([]wire.Rune, 0, len(in))
+	for _, r := range in {
+		out = append(out, wire.Rune{ID: r.ID, Name: r.DisplayName})
+	}
+	return out
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // round trims the float32-widened-to-float64 noise the client sends

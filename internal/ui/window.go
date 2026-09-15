@@ -130,7 +130,22 @@ func (u *UI) buildToggles() fyne.CanvasObject {
 	})
 	updates.SetChecked(cfg.AutoCheckUpdates)
 
-	items := []fyne.CanvasObject{boldLabel("Settings"), share, discord, minimised, updates}
+	// The label has to say what it turns on in plain language: this is the
+	// first feature that reads anything other than the in-game API.
+	lcuCheck := widget.NewCheck("Read queue status and champ select from the League client", func(v bool) {
+		c := u.ctrl.Config()
+		c.LCU = v
+		u.fail(u.ctrl.Save(c))
+		if v {
+			dialog.ShowInformation("League client access",
+				"The agent will read two things from your League client: which stage of the queue you are in, and locked champion picks during champ select.\n\n"+
+					"It never reads chat, friends or match history, and hovered champions and other players' names are never sent.\n\n"+
+					"This takes effect the next time the agent starts.", u.win)
+		}
+	})
+	lcuCheck.SetChecked(cfg.LCU)
+
+	items := []fyne.CanvasObject{boldLabel("Settings"), share, discord, lcuCheck, minimised, updates}
 
 	// macOS has no implementation, so the checkbox is hidden rather than shown
 	// doing nothing.
