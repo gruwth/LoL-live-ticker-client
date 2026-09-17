@@ -56,8 +56,8 @@ To the one server in your config file, over a single WebSocket:
 - `snapshot` — game mode, map, clock, and per player: Riot ID, champion, skin,
   team, position, level, K/D/A, CS, ward score, item IDs, summoner spells, and
   the keystone rune plus both rune tree names.
-- `events` — kills, turrets, dragons, barons and so on, as the game reports
-  them, plus role-quest completions the agent infers (marked `syn`, see below).
+- `events` — kills, turrets, dragons, barons and so on, exactly as the game
+  reports them. Nothing is inferred or added.
 - `gameEnd` — win/lose when the game is over.
 - `idle` — a heartbeat every 30 s while you are not in a game.
 
@@ -80,16 +80,19 @@ descriptions, and your rune pages, are dropped in the transform step and never
 leave the process. There is no second network destination: the only outbound
 connection is the WebSocket to your configured server.
 
-## Inferred events
+## Event fields the spec does not mention
 
-The 2026 role quests fire no event of their own, so the agent infers three of
-them from state it already polls — an upgraded Teleport or a level above 18
-(top), tier-3 boots (mid), an eighth inventory slot (bot) — and sends them as
-normal events flagged `"syn": true`. Nothing extra is read to do this; it is
-the same once-a-second payload, interpreted. Jungle and support get no event,
-because 26.01 gave them tuning rather than an observable reward.
+Riot's published sample event list is incomplete, and two gaps were only
+visible in a real game:
 
-Rune data comes out of that same payload too. The agent never calls
+- **`FirstBlood` names its player in `Recipient`**, not `KillerName` — the
+  sample list omits the event entirely. The agent reads either into the one
+  wire field, so the frontend never has to know the difference.
+- **Each inhibitor event keys the structure name to its own event name**:
+  `InhibKilled`, `InhibRespawned`, `InhibRespawningSoon`. Reading only the
+  first left every respawn anonymous.
+
+Rune data comes out of the same once-a-second payload. The agent never calls
 `/playermainrunes`.
 
 ## Why `InsecureSkipVerify` is in there

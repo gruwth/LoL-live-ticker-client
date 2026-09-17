@@ -154,6 +154,17 @@ type Event struct {
 	Stolen       string   `json:"Stolen,omitempty"`     // "True" / "False" - string, not bool
 	TurretKilled string   `json:"TurretKilled,omitempty"`
 	InhibKilled  string   `json:"InhibKilled,omitempty"`
+	// FirstBlood names its player in Recipient, not KillerName. Riot's own
+	// sample event list omits FirstBlood entirely, so the spec never mentioned
+	// this and the event reached the frontend with no killer at all - it read
+	// "First blood - something" for every game.
+	Recipient string `json:"Recipient,omitempty"`
+	// Each inhibitor event keys the structure name to its OWN event name rather
+	// than to a shared field, so respawn events carry nothing under InhibKilled.
+	// Without these the frontend could not tell which inhibitor came back, and
+	// the minimap left it destroyed for the rest of the game.
+	InhibRespawned      string `json:"InhibRespawned,omitempty"`
+	InhibRespawningSoon string `json:"InhibRespawningSoon,omitempty"`
 	KillStreak   int      `json:"KillStreak,omitempty"`
 	Acer         string   `json:"Acer,omitempty"`
 	AcingTeam    string   `json:"AcingTeam,omitempty"`

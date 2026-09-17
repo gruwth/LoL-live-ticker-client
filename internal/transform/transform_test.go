@@ -149,6 +149,38 @@ func TestEventsStolenParsed(t *testing.T) {
 	}
 }
 
+// FirstBlood is the one event that names its player in Recipient rather than
+// KillerName. Riot's sample event list omits FirstBlood entirely, so nothing in
+// the spec said so and the event reached the frontend with no actor at all.
+func TestEventsFirstBloodTakesRecipient(t *testing.T) {
+	raw := []riot.Event{{EventID: 1, EventName: "FirstBlood", Recipient: "table for one"}}
+	got, _ := Events(raw, NoEventsSeen)
+	if len(got) != 1 || got[0].Killer != "table for one" {
+		t.Errorf("FirstBlood killer = %+v, want Recipient", got)
+	}
+}
+
+// Each inhibitor event names the structure under its own event name, so a
+// respawn carries nothing under InhibKilled. All three have to land on the one
+// wire field, or the frontend cannot say which inhibitor came back.
+func TestEventsInhibNameFromEveryInhibEvent(t *testing.T) {
+	const name = "Barracks_T2_L1"
+	raw := []riot.Event{
+		{EventID: 1, EventName: "InhibKilled", InhibKilled: name},
+		{EventID: 2, EventName: "InhibRespawningSoon", InhibRespawningSoon: name},
+		{EventID: 3, EventName: "InhibRespawned", InhibRespawned: name},
+	}
+	got, _ := Events(raw, NoEventsSeen)
+	if len(got) != 3 {
+		t.Fatalf("got %d events, want 3", len(got))
+	}
+	for _, e := range got {
+		if e.Inhib != name {
+			t.Errorf("%s carried inhib %q, want %q", e.Name, e.Inhib, name)
+		}
+	}
+}
+
 func TestFullRunesSplit(t *testing.T) {
 	s := Snapshot(loadFixture(t), true)
 	if s.Active == nil || s.Active.FullRunes == nil {
