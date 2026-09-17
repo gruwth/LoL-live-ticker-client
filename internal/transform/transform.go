@@ -217,19 +217,34 @@ func round(f float64) float64 {
 
 func convert(e riot.Event) wire.Event {
 	return wire.Event{
-		ID:        e.EventID,
-		Name:      e.EventName,
-		Time:      e.EventTime,
-		Killer:    e.KillerName,
-		Victim:    e.VictimName,
-		Assists:   e.Assisters,
-		Dragon:    e.DragonType,
-		Stolen:    e.Stolen == "True",
-		Turret:    e.TurretKilled,
-		Inhib:     e.InhibKilled,
+		ID:   e.EventID,
+		Name: e.EventName,
+		Time: e.EventTime,
+		// FirstBlood names its player in Recipient; everything else uses
+		// KillerName. Taking whichever is set keeps one wire field for "who did
+		// this" without the frontend having to know the difference.
+		Killer:  firstSet(e.KillerName, e.Recipient),
+		Victim:  e.VictimName,
+		Assists: e.Assisters,
+		Dragon:  e.DragonType,
+		Stolen:  e.Stolen == "True",
+		Turret:  e.TurretKilled,
+		// The three inhibitor events each name the structure under their own
+		// event name, and exactly one of them is ever set.
+		Inhib:     firstSet(e.InhibKilled, e.InhibRespawned, e.InhibRespawningSoon),
 		Streak:    e.KillStreak,
 		Acer:      e.Acer,
 		AcingTeam: e.AcingTeam,
 		Result:    e.Result,
 	}
+}
+
+// firstSet returns the first non-empty argument, or "" if there is none.
+func firstSet(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
